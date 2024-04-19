@@ -1,0 +1,4 @@
+tensorboardX
+scikit-image
+torch===2.2.2+cu121 torchvision===0.17.2+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+ -train_path E:\Work\MachineLearning\datasets\mvcnn\shaded_images\modelnet40_images_new_12x\*\train -val_path E:\Work\MachineLearning\datasets\mvcnn\shaded_images\modelnet40_images_new_12x\*\test
