@@ -66,6 +66,10 @@ class SVCNN(Model):
         else:
             y = self.net_1(x)
             return self.net_2(y.view(y.shape[0],-1))
+    
+    def test(self, x):
+        y = self.net_1(x)
+        return y
 
 
 class MVCNN(Model):
@@ -97,4 +101,8 @@ class MVCNN(Model):
         y = self.net_1(x)
         y = y.view((int(x.shape[0]/self.num_views),self.num_views,y.shape[-3],y.shape[-2],y.shape[-1]))#(8,12,512,7,7)
         return self.net_2(torch.max(y,1)[0].view(y.shape[0],-1))
+    
+    def test(self, x):
+        y = self.net_1(x)
+        return y
 

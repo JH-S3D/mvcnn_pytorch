@@ -25,7 +25,7 @@ class ModelNetTester(object):
 
         self.model.cuda()
 
-    def update_validation_accuracy(self):
+    def test_accuracy(self):
         all_correct_points = 0
         all_points = 0
 
@@ -36,7 +36,7 @@ class ModelNetTester(object):
         self.model.eval()
 
         batch_size = 64  # or whatever your batch size is
-        start_item_index = 1200
+        start_item_index = 0
         start_batch_index = start_item_index // batch_size
 
         for _, data in enumerate(self.val_loader, 0):
@@ -83,3 +83,34 @@ class ModelNetTester(object):
 
         return loss, val_overall_acc, val_mean_class_acc
 
+    def test_embedding(self, start=0, interval=1):
+        self.model.eval()
+
+        batch_size = 1  # or whatever your batch size is
+        start_item_index = start
+        start_batch_index = start_item_index // batch_size
+
+        with torch.no_grad():
+            for i, data in enumerate(self.val_loader, 0):
+                if i < start_batch_index:
+                    continue
+
+                if i % interval != 0:
+                    continue
+
+                if self.model_name == 'mvcnn':
+                    print("Data: ", data[1].size())
+                    N, V, C, H, W = data[1].size()
+                    in_data = Variable(data[1]).view(-1, C, H, W).cuda()
+                    print("In Data: ", in_data.size())
+                else:  # 'svcnn'
+                    in_data = Variable(data[1]).cuda()
+                    plt.imshow(data[1][0].permute(1, 2, 0).numpy())
+                    plt.pause(0.001)
+                target = Variable(data[0]).cuda()
+
+                out_data = self.model.test(in_data)
+                print("Output Shape: ", out_data.size())
+                
+                print("Reshaped Output Shape: ", out_data.view((int(in_data.shape[0]/self.num_views),self.num_views,out_data.shape[-3],out_data.shape[-2],out_data.shape[-1])).size())#(8,12,512,7,7))
+            
