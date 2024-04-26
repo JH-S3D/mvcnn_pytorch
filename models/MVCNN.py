@@ -57,6 +57,11 @@ class SVCNN(Model):
             elif self.cnn_name == 'vgg16':
                 self.net_1 = models.vgg16(pretrained=self.pretraining).features
                 self.net_2 = models.vgg16(pretrained=self.pretraining).classifier
+            elif self.cnn_name == 'vgg16_embedding':
+                self.net_1 = torch.nn.Sequential(
+                    *list(models.vgg16(pretrained=self.pretraining).features),
+                    models.vgg16.avgpool
+                )
             
             self.net_2._modules['6'] = nn.Linear(4096,40)
 
@@ -67,14 +72,14 @@ class SVCNN(Model):
             y = self.net_1(x)
             return self.net_2(y.view(y.shape[0],-1))
     
-    def test(self, x):
+    def get_embedded_vector(self, x):
         y = self.net_1(x)
         return y
 
 
 class MVCNN(Model):
 
-    def __init__(self, name, model, nclasses=40, cnn_name='vgg11', num_views=12):
+    def __init__(self, name, model, nclasses=40, cnn_name='vgg11', num_views=12, embedding_layer=-1):
         super(MVCNN, self).__init__(name)
 
         self.classnames=['airplane','bathtub','bed','bench','bookshelf','bottle','bowl','car','chair',
@@ -96,13 +101,29 @@ class MVCNN(Model):
         else:
             self.net_1 = model.net_1
             self.net_2 = model.net_2
+        
+        def get_activation(name):
+            print("get_activation")
+            self.outputs = {}
+            def hook(model, input, output):
+                output_data = output.detach()
+                self.outputs[name] = output_data
+            return hook
+
+        self.embedding_layer = embedding_layer
+        self.net_2[self.embedding_layer].register_forward_hook(get_activation('{self.embedding_layer}'))
 
     def forward(self, x):
         y = self.net_1(x)
         y = y.view((int(x.shape[0]/self.num_views),self.num_views,y.shape[-3],y.shape[-2],y.shape[-1]))#(8,12,512,7,7)
         return self.net_2(torch.max(y,1)[0].view(y.shape[0],-1))
     
-    def test(self, x):
+    def get_embedded_vector(self, x):
         y = self.net_1(x)
-        return y
+        y = y.view((int(x.shape[0]/self.num_views),self.num_views,y.shape[-3],y.shape[-2],y.shape[-1]))#(8,12,512,7,7)
+        self.net_2(torch.max(y,1)[0].view(y.shape[0],-1))
+        return self.outputs['{self.embedding_layer}']
+    
+
+    
 

@@ -11,6 +11,8 @@ import time
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 
+from sklearn.neighbors import NearestNeighbors
+
 
 class ModelNetTester(object):
 
@@ -83,34 +85,32 @@ class ModelNetTester(object):
 
         return loss, val_overall_acc, val_mean_class_acc
 
-    def test_embedding(self, start=0, interval=1):
+    def test_embedding(self):
         self.model.eval()
 
-        batch_size = 1  # or whatever your batch size is
-        start_item_index = start
-        start_batch_index = start_item_index // batch_size
+        vectors = []
+        data_indices = []
 
         with torch.no_grad():
             for i, data in enumerate(self.val_loader, 0):
-                if i < start_batch_index:
-                    continue
-
-                if i % interval != 0:
-                    continue
+                print("Loading test #", i)
 
                 if self.model_name == 'mvcnn':
-                    print("Data: ", data[1].size())
                     N, V, C, H, W = data[1].size()
                     in_data = Variable(data[1]).view(-1, C, H, W).cuda()
-                    print("In Data: ", in_data.size())
                 else:  # 'svcnn'
                     in_data = Variable(data[1]).cuda()
                     plt.imshow(data[1][0].permute(1, 2, 0).numpy())
                     plt.pause(0.001)
                 target = Variable(data[0]).cuda()
 
-                out_data = self.model.test(in_data)
-                print("Output Shape: ", out_data.size())
+                out_data = self.model.get_embedded_vector(in_data)
+                vector = out_data#.cpu().data.numpy()[0]
+                vectors.append(vector)
+                data_indices.append(i)
+                print("Finished test #", i)
+                #return out_data
+    
+        return vectors, data_indices
                 
-                print("Reshaped Output Shape: ", out_data.view((int(in_data.shape[0]/self.num_views),self.num_views,out_data.shape[-3],out_data.shape[-2],out_data.shape[-1])).size())#(8,12,512,7,7))
             
